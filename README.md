@@ -63,9 +63,12 @@ Choose another port with `python3 -m pr_menu --port 4318`.
 2. Read a branch's purpose, checklist, and verification notes.
 3. Use **Copy startup command**, inspect the command, and paste it into a terminal. Commands may stop apps on the project's development ports.
 4. Visit its test-page links. Change **App URL** if your application runs somewhere other than localhost:3000.
-5. Use **Create PR** to copy a commit/push/PR command. It stages all non-ignored changes; inspect it before running. It opens an existing PR when available.
+5. Use **Open in Codex** to open a new desktop chat in this branch’s workspace. It reuses an existing checkout of the branch or creates an isolated worktree under `.pr-menu/workspaces/`. Codex opens with a review prompt; press Send when ready. It does not install dependencies or copy environment files. Codex desktop and the `codex://` handler must be installed.
+6. Use **Create PR** to copy a commit/push/PR command. It stages all non-ignored changes; inspect it before running. It opens an existing PR when available.
 
-The dashboard never executes shell commands. The localhost server only serves the UI and the selected report data.
+Startup and Create PR buttons only copy shell commands. Open in Codex runs a fixed set of Git commands to resolve the selected local branch and, if necessary, create a worktree. It never runs a command from the report, switches an existing checkout, sends the chat prompt, or launches an agent automatically. Requests require the local page origin and an action token.
+
+The chat links use the [official desktop deep-link format](https://learn.chatgpt.com/docs/app/commands).
 
 ## Local snapshots
 

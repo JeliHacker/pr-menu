@@ -2,7 +2,7 @@ import json
 import threading
 import unittest
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from http.server import ThreadingHTTPServer
 from pr_menu.__main__ import handler, load_report
 
@@ -35,6 +35,27 @@ class ServerTests(unittest.TestCase):
     def test_page_is_served(self):
         with urlopen(self.url) as response:
             self.assertIn(b'What should I try next?', response.read())
+
+    def test_workspace_actions_reject_missing_or_cross_origin_tokens(self):
+        with urlopen(self.url + '/api/report') as response:
+            token = json.load(response)['actionToken']
+        for headers in ({'Origin': self.url},
+                        {'Origin': 'https://example.test', 'X-Pr-Menu-Token': token}):
+            request = Request(self.url + '/api/codex', data=b'{"branch":"feature/search"}',
+                              headers={**headers, 'Content-Type': 'application/json'}, method='POST')
+            with self.assertRaises(HTTPError) as error:
+                urlopen(request)
+            self.assertEqual(error.exception.code, 403)
+
+    def test_demo_workspace_action_is_rejected_even_with_valid_token(self):
+        with urlopen(self.url + '/api/report') as response:
+            token = json.load(response)['actionToken']
+        request = Request(self.url + '/api/codex', data=b'{"branch":"feature/search"}',
+                          headers={'Origin': self.url, 'X-Pr-Menu-Token': token,
+                                   'Content-Type': 'application/json'}, method='POST')
+        with self.assertRaises(HTTPError) as error:
+            urlopen(request)
+        self.assertEqual(error.exception.code, 400)
 
     def test_arbitrary_local_files_are_not_served(self):
         for path in ('/.pr-menu/inventory.json', '/README.md', '/../LICENSE'):

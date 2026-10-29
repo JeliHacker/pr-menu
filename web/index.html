@@ -10,7 +10,7 @@
 <body><main>
 <header><div><h1>pr-menu</h1><p class="muted">What should I try next?</p></div><button id="reload">Reload snapshot</button></header>
 <p id="source" class="detail"></p><div id="summary" class="summary"></div>
-<p class="notice">This is a snapshot, not a live GitHub feed. Test links open your running app. Startup and Create PR buttons copy commands for you to inspect and run in a terminal; nothing executes here. Stop other dev runs before changing branches. Create PR commands stage all non-ignored changes in their checkout.</p>
+<p class="notice">This is a snapshot, not a live GitHub feed. Test links open your running app. Startup and Create PR buttons copy terminal commands. Open in Codex opens a new chat and may prepare a separate branch worktree; it does not send the prompt or switch your current checkout. Stop other dev runs before changing branches. Create PR commands stage all non-ignored changes in their checkout.</p>
 <div class="controls"><label>Search <input id="search" type="search" placeholder="Branch, workspace, or purpose"></label><label>Show <select id="category"><option value="">All</option><option value="review">Review</option><option value="active">Active</option><option value="keep">Keep</option><option value="delete">Delete candidate</option><option value="archive">Archive candidate</option><option value="prune">Stale registration</option></select></label><label>App URL <input id="base" type="url" value="http://localhost:3000"></label></div>
 <nav><a href="#branches">Branches</a><a href="#workspaces">Workspaces</a></nav>
 <p id="error" role="alert" hidden></p><div id="content"></div>
@@ -21,6 +21,22 @@ function element(tag,text,cls){const el=document.createElement(tag);if(text!==un
 function paragraph(parent,text,cls){if(text)parent.append(element('p',text,cls));}
 function safeLink(label,url){try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return element('span',label);const a=element('a',label);a.href=parsed.href;a.target='_blank';a.rel='noopener';return a;}catch{return element('span',label);}}
 function command(parent,label,value){if(!value)return;const box=element('div',undefined,'command');const button=element('button',label);button.type='button';const details=element('details');details.append(element('summary','View terminal command'));const pre=element('pre',value);details.append(pre);button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(value);button.textContent='Copied';}catch{details.open=true;const range=document.createRange();range.selectNodeContents(pre);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);button.textContent='Selected — copy with your keyboard';}});box.append(button,details);parent.append(box);}
+function codexAction(parent,branch,data){
+ const box=element('div',undefined,'command');const button=element('button','Open in Codex');button.type='button';
+ const status=element('p',undefined,'detail');status.setAttribute('role','status');
+ if(data.mode!=='local'){button.disabled=true;status.textContent='Connect a local snapshot to open this branch in Codex.';}
+ button.addEventListener('click',async()=>{
+  button.disabled=true;status.textContent='Finding or preparing this branch’s workspace…';
+  try{
+   const response=await fetch('/api/codex',{method:'POST',headers:{'Content-Type':'application/json','X-Pr-Menu-Token':data.actionToken},body:JSON.stringify({branch:branch.name})});
+   const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not prepare the workspace. Reload the snapshot and retry.');
+   if(!result.url.startsWith('codex://new?'))throw new Error('Unexpected Codex link.');
+   status.replaceChildren(element('span',(result.created?'Created a separate worktree: ':'Using existing workspace: ')+result.workspace+'. Review the prompt in Codex and press Send. '));
+   const link=element('a','Open chat in Codex');link.href=result.url;status.append(link);
+   window.location.href=result.url;
+  }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+ });box.append(button,status);parent.append(box);
+}
 function routeUrl(path){try{const base=new URL($('#base').value);if(!['http:','https:'].includes(base.protocol))return null;return new URL(path,base.href).href;}catch{return null;}}
 function applyFilters(){const query=$('#search').value.toLowerCase(),category=$('#category').value;document.querySelectorAll('.entry').forEach(row=>{row.hidden=!(row.textContent.toLowerCase().includes(query)&&(!category||row.dataset.category===category));});}
 function updateLinks(){document.querySelectorAll('[data-route]').forEach(link=>{const url=routeUrl(link.dataset.route);if(url)link.href=url;else link.removeAttribute('href');});}
@@ -35,7 +51,7 @@ function render(data){
   if(b.pr?.url){const p=element('p');p.append(safeLink(`PR #${b.pr.number} · ${b.pr.state}`,b.pr.url));row.append(p);}
   if(b.testPages?.length){const test=element('div',undefined,'test');test.append(element('strong','Pages to test'));const links=element('p',undefined,'links');for(const page of b.testPages){const a=safeLink(page.label,routeUrl(page.path));if(a.tagName==='A')a.dataset.route=page.path;links.append(a);}test.append(links);paragraph(test,b.testChecklist);row.append(test);}
   if(b.verification){const v=b.verification;const box=element('div',undefined,'test');box.append(element('strong','Verification'));paragraph(box,`${v.backend} backend tests passed · ${v.frontend} frontend tests passed`);paragraph(box,v.chart);paragraph(box,v.rollout);paragraph(box,v.checkedAt,'detail');row.append(box);}
-  command(row,'Copy startup command',b.startupCommand);command(row,'Create PR',b.createPrCommand);content.append(row);
+  codexAction(row,b,data);command(row,'Copy startup command',b.startupCommand);command(row,'Create PR',b.createPrCommand);content.append(row);
  }
  const wh=element('h2','Workspaces');wh.id='workspaces';content.append(wh);
  for(const w of workspaces){const row=entry(w.path,w.category);paragraph(row,w.reason);paragraph(row,w.action);paragraph(row,`Branch: ${w.branch||'detached'} · ${(w.changes||[]).length} changed/untracked paths`,'detail');content.append(row);}
