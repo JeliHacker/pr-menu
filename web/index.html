@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pr-menu · What should I try next?</title>
+<style>
+:root{color-scheme:dark;--bg:#101720;--panel:#1a2633;--stroke:#34485d;--text:#e4eaf2;--muted:#a8bacd;--accent:#a8e6bc}*{box-sizing:border-box}body{font:15px system-ui;margin:0;background:var(--bg);color:var(--text)}main{max-width:1150px;margin:32px auto;padding:0 24px 64px}header{display:flex;justify-content:space-between;gap:24px;align-items:start}h1{font-size:24px;margin:0}h2{font-size:20px;margin-top:32px}h3{font-size:16px;margin:4px 0;overflow-wrap:anywhere}p{line-height:1.6}a{color:#8bc8ff}small,.muted,.detail{color:var(--muted)}.detail{font-size:13px}.summary{margin:24px 0;padding:16px 0;border-block:1px solid var(--stroke)}.controls,.links{display:flex;gap:14px;flex-wrap:wrap;align-items:center}label{display:flex;gap:8px;align-items:center}input,select,button{font:inherit;border:1px solid #53677e;border-radius:5px;padding:9px;background:#202c3a;color:inherit}button{cursor:pointer}button:hover{border-color:var(--accent)}input{max-width:100%}.entry{padding:20px 0;border-bottom:1px solid var(--stroke)}.tag{text-transform:uppercase;font-size:12px;letter-spacing:.06em;color:var(--muted)}.review .tag{color:var(--accent)}.test{padding:12px 18px;margin:14px 0;background:var(--panel);border-left:2px solid #759ab6}.command{margin-top:16px}details{margin-top:10px}pre{font:12px/1.7 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#0b121b}code{overflow-wrap:anywhere}.notice{color:var(--muted);font-size:13px}#error{color:#ffb8af}nav{margin-top:14px;display:flex;gap:20px}summary{cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(max-width:600px){main{padding:0 16px}header{display:block}.controls{align-items:stretch;flex-direction:column}label{justify-content:space-between}}
+</style>
+</head>
+<body><main>
+<header><div><h1>pr-menu</h1><p class="muted">What should I try next?</p></div><button id="reload">Reload snapshot</button></header>
+<p id="source" class="detail"></p><div id="summary" class="summary"></div>
+<p class="notice">This is a snapshot, not a live GitHub feed. Test links open your running app. Startup and Create PR buttons copy commands for you to inspect and run in a terminal; nothing executes here. Stop other dev runs before changing branches. Create PR commands stage all non-ignored changes in their checkout.</p>
+<div class="controls"><label>Search <input id="search" type="search" placeholder="Branch, workspace, or purpose"></label><label>Show <select id="category"><option value="">All</option><option value="review">Review</option><option value="active">Active</option><option value="keep">Keep</option><option value="delete">Delete candidate</option><option value="archive">Archive candidate</option><option value="prune">Stale registration</option></select></label><label>App URL <input id="base" type="url" value="http://localhost:3000"></label></div>
+<nav><a href="#branches">Branches</a><a href="#workspaces">Workspaces</a></nav>
+<p id="error" role="alert" hidden></p><div id="content"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function element(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
+function paragraph(parent,text,cls){if(text)parent.append(element('p',text,cls));}
+function safeLink(label,url){try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return element('span',label);const a=element('a',label);a.href=parsed.href;a.target='_blank';a.rel='noopener';return a;}catch{return element('span',label);}}
+function command(parent,label,value){if(!value)return;const box=element('div',undefined,'command');const button=element('button',label);button.type='button';const details=element('details');details.append(element('summary','View terminal command'));const pre=element('pre',value);details.append(pre);button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(value);button.textContent='Copied';}catch{details.open=true;const range=document.createRange();range.selectNodeContents(pre);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);button.textContent='Selected — copy with your keyboard';}});box.append(button,details);parent.append(box);}
+function routeUrl(path){try{const base=new URL($('#base').value);if(!['http:','https:'].includes(base.protocol))return null;return new URL(path,base.href).href;}catch{return null;}}
+function applyFilters(){const query=$('#search').value.toLowerCase(),category=$('#category').value;document.querySelectorAll('.entry').forEach(row=>{row.hidden=!(row.textContent.toLowerCase().includes(query)&&(!category||row.dataset.category===category));});}
+function updateLinks(){document.querySelectorAll('[data-route]').forEach(link=>{const url=routeUrl(link.dataset.route);if(url)link.href=url;else link.removeAttribute('href');});}
+function entry(name,category){const row=element('section',undefined,'entry '+category);row.dataset.category=category;row.append(element('span',category,'tag'),element('h3',name));return row;}
+function render(data){
+ $('#source').textContent=(data.mode==='demo'?'Demo · ':'Local · ')+data.repo+' · '+data.asOf;
+ const branches=data.branches||[],workspaces=data.workspaces||[];
+ $('#summary').textContent=`${branches.length} branches · ${workspaces.length} workspaces · ${branches.filter(b=>b.category==='review').length} need review`;
+ const content=$('#content');content.replaceChildren();const bh=element('h2','Branches');bh.id='branches';content.append(bh);
+ for(const b of [...branches].sort((a,b)=>(a.category!=='review')-(b.category!=='review')||a.name.localeCompare(b.name))){
+  const row=entry(b.name,b.category);paragraph(row,b.reason);paragraph(row,b.action);paragraph(row,`${(b.head||'').slice(0,7)} · ${b.aheadMain??0} ahead / ${b.behindMain??0} behind main`,'detail');paragraph(row,b.workspace,'detail');
+  if(b.pr?.url){const p=element('p');p.append(safeLink(`PR #${b.pr.number} · ${b.pr.state}`,b.pr.url));row.append(p);}
+  if(b.testPages?.length){const test=element('div',undefined,'test');test.append(element('strong','Pages to test'));const links=element('p',undefined,'links');for(const page of b.testPages){const a=safeLink(page.label,routeUrl(page.path));if(a.tagName==='A')a.dataset.route=page.path;links.append(a);}test.append(links);paragraph(test,b.testChecklist);row.append(test);}
+  if(b.verification){const v=b.verification;const box=element('div',undefined,'test');box.append(element('strong','Verification'));paragraph(box,`${v.backend} backend tests passed · ${v.frontend} frontend tests passed`);paragraph(box,v.chart);paragraph(box,v.rollout);paragraph(box,v.checkedAt,'detail');row.append(box);}
+  command(row,'Copy startup command',b.startupCommand);command(row,'Create PR',b.createPrCommand);content.append(row);
+ }
+ const wh=element('h2','Workspaces');wh.id='workspaces';content.append(wh);
+ for(const w of workspaces){const row=entry(w.path,w.category);paragraph(row,w.reason);paragraph(row,w.action);paragraph(row,`Branch: ${w.branch||'detached'} · ${(w.changes||[]).length} changed/untracked paths`,'detail');content.append(row);}
+ if(data.removedBranches?.length){content.append(element('h2','Removed during cleanup'));paragraph(content,data.removedBranches.join(', '),'detail');}
+ applyFilters();
+}
+async function load(){const button=$('#reload');button.disabled=true;$('#error').hidden=true;try{const response=await fetch('/api/report');if(!response.ok)throw new Error('Could not load the snapshot. Check the server terminal.');render(await response.json());}catch(error){$('#error').textContent=error.message;$('#error').hidden=false;}finally{button.disabled=false;}}
+$('#reload').addEventListener('click',load);$('#search').addEventListener('input',applyFilters);$('#category').addEventListener('change',applyFilters);$('#base').addEventListener('input',updateLinks);load();
+</script></body></html>

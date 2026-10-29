@@ -7,3 +7,5 @@ coverage/
 .pr-menu/
 *.log
 .DS_Store
+__pycache__/
+*.pyc

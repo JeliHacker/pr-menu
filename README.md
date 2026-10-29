@@ -37,9 +37,53 @@ The core experience is a human-testing queue. Issue listings and branch/workspac
 
 A successful CI run and a passing human check are separate pieces of evidence. Neither implies that required production configuration or alert delivery has been verified.
 
+## Run it
+
+Requires Python 3.10 or newer. No package installation is needed.
+
+```sh
+git clone https://github.com/JeliHacker/pr-menu.git
+cd pr-menu
+make dev
+```
+
+Open **http://localhost:4317**. Stop the server with **Ctrl+C**.
+
+A fresh clone shows fictional demo data. To always show the demo, run:
+
+```sh
+python3 -m pr_menu --demo
+```
+
+Choose another port with `python3 -m pr_menu --port 4318`.
+
+## Use the menu
+
+1. Select **Review** in the category filter.
+2. Read a branch's purpose, checklist, and verification notes.
+3. Use **Copy startup command**, inspect the command, and paste it into a terminal. Commands may stop apps on the project's development ports.
+4. Visit its test-page links. Change **App URL** if your application runs somewhere other than localhost:3000.
+5. Use **Create PR** to copy a commit/push/PR command. It stages all non-ignored changes; inspect it before running. It opens an existing PR when available.
+
+The dashboard never executes shell commands. The localhost server only serves the UI and the selected report data.
+
+## Local snapshots
+
+The current version displays snapshots; it does not discover repositories or query GitHub automatically. **Reload snapshot** rereads the file, not GitHub.
+
+Put a report matching the structure of [demo.json](demo.json) in `.pr-menu/inventory.json`. This directory is ignored by Git. Refresh the dashboard after replacing that file. Never commit a personal snapshot or environment files.
+
+The original DCF dashboard and its snapshot have been imported locally on the initial developer's machine. Other clones use demo data unless they supply their own snapshot.
+
+## Test
+
+```sh
+make test
+```
+
 ## Status
 
-Project foundation. The application is not implemented yet.
+The original HTML dashboard has been ported into a dependency-free local application. Filters, test links, snapshot reload, and copyable commands work. Live GitHub/Git discovery, persisted dogfooding results, and approved command execution are future work.
 
 See [the first-version plan](PLAN.md). This repository contains no credentials, private repository snapshots, or personal workstation paths.
 

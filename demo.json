@@ -1,0 +1,44 @@
+{
+  "repo": "example/sample-app",
+  "asOf": "Demo snapshot \u2014 fictional data",
+  "branches": [
+    {
+      "name": "feature/search",
+      "category": "review",
+      "head": "a1b2c3d",
+      "aheadMain": 1,
+      "behindMain": 0,
+      "reason": "Adds a faster company search. Automated checks passed; hands-on testing is pending.",
+      "action": "Try fast typing, clearing the input, and choosing a result.",
+      "workspace": "/path/to/sample-app",
+      "testPages": [
+        {
+          "path": "/browse",
+          "label": "Browse and search"
+        }
+      ],
+      "testChecklist": "Confirm results correspond to the current input. Test keyboard navigation and small screens.",
+      "startupCommand": "cd /path/to/sample-app && make dev"
+    },
+    {
+      "name": "fix/loading-state",
+      "category": "delete",
+      "head": "d4e5f6a",
+      "aheadMain": 0,
+      "behindMain": 2,
+      "reason": "Example merged branch with no remaining local work.",
+      "action": "Review before deleting; this demo does not run cleanup commands."
+    }
+  ],
+  "workspaces": [
+    {
+      "path": "/path/to/sample-app",
+      "branch": "feature/search",
+      "category": "review",
+      "changes": [],
+      "reason": "Workspace for testing the search change.",
+      "action": "Keep until hands-on testing is complete."
+    }
+  ],
+  "removedBranches": []
+}
